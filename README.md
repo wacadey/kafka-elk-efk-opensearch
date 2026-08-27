@@ -74,3 +74,29 @@ Python 로그 생성기 ┤
                                   ▼
                            AWS Firehose -> 버퍼링 -> s3(브론즈) or opensearch(인덱스(센서/공장관리단위) 검색)
 ```
+
+# 개발 환경 구성
+- docker-compose.yaml 구성
+```
+    docker compose up -d
+```
+
+- kafka <-> kinesis
+    - 대규모 실시간 데이터를 처리하기 위해 만든 오픈소스 분산형 이벤트 스트리밍 플랫폼
+    - 프로듀서, 컨슈머, 토픽
+    - 수 밀리초 단위 초저지연 전송 유리
+    - AWS MSK로 제공
+    - 최신 방식으로 구성
+
+- Fluentd(40~-60MB) <-> Fluent-Bit(1~5MB)
+    - 태그 기반 라우팅 도구
+    - Ruby+C 결합 구조 <-> C
+    - 서비스 세팅 후 fluent-bit.conf 설정으로 끝
+    - Fluent-Bit 목적
+        - 데이터 수집, 처리, 전달 (ETL 도구)
+        - 경량형 오픈소스 로그 프로세서
+        - 고가용성, 고성능처리, 데이터 처리 안정성등 장점
+        - Input 스트림으로 파일, 버퍼, 라우팅, ... 대부분 지원
+        - Output 스트림 대부분 서비스 모두 지원 (kafka/opensearch/s3/...)
+            - 지원 플러그인 활용
+    - fluent-bit.conf -> 수정 -> docker compose restart -> 수정내용이 반영됨
