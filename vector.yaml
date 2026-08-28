@@ -1,4 +1,4 @@
-# 1. source (input-local kafka)
+# 1. sources (input-local kafka)
 sources:
   kafka_to_firehose_source:
     type: "kafka"
@@ -23,8 +23,16 @@ transforms:
       .vector_ingest_at = now()
 
 # 3. sink (output-aws firehose)
-# sinks:
-#   firehose_sink:
+sinks:
+  firehose_sink:
+    type: "aws_kinesis_firehose"
+    inputs:
+      - "add_ingest_time"
+    region: "${AWS_REGION}"
+    stream_name: "${FIREHOSE_STREAM_NAME}"
+    encoding:
+      codec:  "json"
+
 
 # 4. sink (output-debug)
 sinks:

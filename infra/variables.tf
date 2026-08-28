@@ -61,7 +61,8 @@ variable "firehose_buffer_interval" {
 variable "vector_iam_user_name" {
   description = "선택값. 로컬 Vector가 사용하는 기존 IAM User에 Firehose Put 권한을 Terraform으로 붙일 때 지정한다. 비워두면 정책만 생성한다."
   type        = string
-  default     = "de-ai-12-ap2-kafka-vector-user"
+  # 개인 관리 번호로 교체 25 => xx
+  default = "de-ai-12-ap2-kafka-vector-user"
 }
 
 variable "tags" {

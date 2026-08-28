@@ -56,7 +56,7 @@ Python 로그 생성기 ┤
                    /           \
           JSON 직결             TEXT
              │                  │
-             │               HTTP
+             │               HTTP, 5022 포트
              │                  ▼
              │              Logstash
              │              Grok 변환 -> 비정형 => 반정형 처리
@@ -72,7 +72,7 @@ Python 로그 생성기 ┤
        Kafka UI(대시보드)        Vector (서비스) -> kafka 메시지 firehose 전송
                                   │
                                   ▼
-                           AWS Firehose -> 버퍼링 -> s3(브론즈) or opensearch(인덱스 (센서/공장관리단위) 검색) -> Airflow DAG 활용 -> 메달리온 아킥텍처 적용
+                           `AWS Firehose` -> 버퍼링 -> s3(opensearch 전송 실패한 데이터만 모은다) or `opensearch`(인덱스 (센서/공장관리단위) 검색) -> Airflow DAG 활용 -> 메달리온 아킥텍처 적용
 ```
 
 # 개발 환경 구성
