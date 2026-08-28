@@ -51,7 +51,7 @@ Python 로그 생성기 ┤
                   └─ sensor_text.log (비정형 데이터)
                          │
                          ▼
-                    Fluent Bit
+                    Fluent Bit  <- 컨셉상 2가지 방향성 설계한것임(실제는 1개만 수행)
                     /         \
                    /           \
           JSON 직결             TEXT
@@ -62,17 +62,17 @@ Python 로그 생성기 ┤
              │              Grok 변환 -> 비정형 => 반정형 처리
              │                  │
              ▼                  ▼
- factory-json-topic      factory-text-topic
+ factory-json-topic      factory-text-topic   <- 토픽 : 카프카에서 메세지 구분하는 용도
              \                 /
               \               /
                  Apache Kafka (브로커 데이터 수신) -> AWS 외부 or EC2 or 쿠버네티스 상주 or MSK(전용 AWS 서비스)
                       │
           ┌───────────┴───────────┐
           ▼                       ▼
-       Kafka UI(대시보드)        Vector (서비스)
+       Kafka UI(대시보드)        Vector (서비스) -> kafka 메시지 firehose 전송
                                   │
                                   ▼
-                           AWS Firehose -> 버퍼링 -> s3(브론즈) or opensearch(인덱스(센서/공장관리단위) 검색)
+                           AWS Firehose -> 버퍼링 -> s3(브론즈) or opensearch(인덱스 (센서/공장관리단위) 검색) -> Airflow DAG 활용 -> 메달리온 아킥텍처 적용
 ```
 
 # 개발 환경 구성
