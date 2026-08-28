@@ -1,0 +1,16 @@
+# 1. source (input-local kafka)
+source:
+  kafka_to_firehose_source:
+    type:
+
+# 2. transform (처리시간 삽입)
+transforms:
+  add_ingest_time:
+
+# 3. sink (output-aws firehose)
+# sinks:
+#   firehose_sink:
+
+# 4. sink (output-debug)
+sinks:
+  debug_console:
