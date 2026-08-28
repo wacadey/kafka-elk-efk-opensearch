@@ -118,3 +118,39 @@ flowchart TD
         - 输出流支持 Kafka、OpenSearch、S3 等大多数服务
             - 可利用相应的插件
     - 修改 fluent-bit.conf 后执行 docker compose restart，使修改生效
+        - 也可以先停止并删除现有容器，再重新启动：
+          ```powershell
+          docker compose down
+          docker compose up -d
+          ```
+    - 测试
+      ```powershell
+      # 持续查看 Fluent Bit 日志
+      docker logs -f fluent-bit
+
+      # 运行日志生成器
+      python log_gen.py
+      ```
+
+# Kafka 测试
+- 进入 Kafka 容器并创建 Topic
+  ```sh
+  # 进入容器
+  docker container exec -it kafka-local bash
+
+  # 创建名为 spacex 的 Topic
+  sh /opt/kafka/bin/kafka-topics.sh --create --topic spacex --bootstrap-server 127.0.0.1:9092 --partitions 1 --replication-factor 1
+
+  # 启动生产者；输入消息并按 Enter 即可发送
+  sh /opt/kafka/bin/kafka-console-producer.sh --topic spacex --bootstrap-server 127.0.0.1:9092
+
+  # 启动消费者，接收 spacex Topic 的消息
+  sh /opt/kafka/bin/kafka-console-consumer.sh --topic spacex --bootstrap-server 127.0.0.1:9092
+  ```
+
+上述 Topic 配置表示：创建一个名为 `spacex` 的 Topic，使用 1 个分区和 1 个副本，并连接容器内 `127.0.0.1:9092` 上的 Kafka Broker。
+
+- 测试接收 Fluent Bit 发送的传感器消息
+  ```sh
+  sh /opt/kafka/bin/kafka-console-consumer.sh --topic factory-json-topic --bootstrap-server 127.0.0.1:9092
+  ```
