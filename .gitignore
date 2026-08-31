@@ -216,6 +216,10 @@ logs/**
 *.tfstate
 *.tfstate.*
 *.tfplan
+tfplan
+.check_bronze.zip
+.cleanup_gold.zip
+.quality_check.zip
 crash.log
 terraform.tfvars
 

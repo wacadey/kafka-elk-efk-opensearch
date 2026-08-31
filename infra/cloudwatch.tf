@@ -8,3 +8,8 @@ resource "aws_cloudwatch_log_stream" "firehose" {
   name           = local.firehose_log_stream
   log_group_name = aws_cloudwatch_log_group.firehose.name
 }
+
+resource "aws_cloudwatch_log_group" "stepfunctions" {
+  name              = "/aws/sfn/states/${local.sfn_name}"
+  retention_in_days = 7
+}

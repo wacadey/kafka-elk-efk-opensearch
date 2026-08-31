@@ -1,10 +1,10 @@
 # 목표
 - kafka 이해, 활용, 응용
 - ELK, EFK에서
-    - 데이터 전송/필터링/전처리 등 역활 담당
+    - 데이터 전송/필터링/전처리 등 역할 담당
         - L:Logstash    -> 라이브러리 활용, 비정형데이터(text 로그파일) => 가공 => json 전송
         - F:Fluent-Bit  -> json 전송, text 전송
-        - 센서 장비 + 장비등(배치) => 로그 발생 => 바로 전송(Fluent-Bit/Logstash) => kafka 전송 => vector => firhose => opensearch/s3 => 검색 서비스 활용
+        - 센서 장비 + 장비등(배치) => 로그 발생 => 바로 전송(Fluent-Bit/Logstash) => kafka 전송 => vector => firehose => opensearch/s3 => 검색 서비스 활용
 - opensearch
     - E:엘라스틱서치의 AWS 버전(저작권 오픈된 버전)
     - 검색엔진, 인덱스 검색
@@ -72,7 +72,7 @@ Python 로그 생성기 ┤
        Kafka UI(대시보드)        Vector (서비스) -> kafka 메시지 firehose 전송
                                   │
                                   ▼
-                           `AWS Firehose` -> 버퍼링 -> s3(opensearch 전송 실패한 데이터만 모은다) or `opensearch`(인덱스 (센서/공장관리단위) 검색) -> Airflow DAG 활용 -> 메달리온 아킥텍처 적용
+                           `AWS Firehose` -> 버퍼링 -> s3(opensearch 전송 실패한 데이터만 모은다) or `opensearch`(인덱스 (센서/공장관리단위) 검색) -> Airflow DAG 활용 -> 메달리온 아키텍처 적용
 ```
 
 # 개발 환경 구성
@@ -153,7 +153,7 @@ Python 로그 생성기 ┤
 }
 ```
 
-# 오픈서치에서 적제된 문서 수 체크 
+# 오픈서치에서 적재된 문서 수 체크
 ```
 https://<도메인 엔드포인트>/factory-sensor-001/_count
 https://search-de-ai-25-kakfa-efk-os-36lnvgun6zis4p6fombw3ef6ay.ap-northeast-2.es.amazonaws.com/factory-sensor-001/_count
