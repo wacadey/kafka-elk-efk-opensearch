@@ -32,13 +32,10 @@ sinks:
     stream_name: "${FIREHOSE_STREAM_NAME}"
     encoding:
       codec:  "json"
-
-
-# 4. sink (output-debug)
-sinks:
-  debug_console:
-    type: "console"
-    inputs:
-      - "add_ingest_time"
-    encoding:
-      codec: "json"
+# # 4. sink (output-debug)
+#   debug_console:
+#     type: "console"
+#     inputs:
+#       - "add_ingest_time"
+#     encoding:
+#       codec: "json"

@@ -128,6 +128,8 @@ Python 로그 생성기 ┤
 ```
     # 컨슈머
     sh opt/kafka/bin/kafka-console-consumer.sh --topic factory-json-topic --bootstrap-server 127.0.0.1:9092
+
+    sh opt/kafka/bin/kafka-console-consumer.sh --topic factory-text-topic --bootstrap-server 127.0.0.1:9092
 ```
 
 # Vector
@@ -149,4 +151,14 @@ Python 로그 생성기 ┤
     "timestamp":"2026-08-28T04:15:34.604Z",             
     "vector_ingest_at":"2026-08-28T04:15:34.617424692Z"
 }
+```
+
+# 오픈서치에서 적제된 문서 수 체크 
+```
+https://<도메인 엔드포인트>/factory-sensor-001/_count
+https://search-de-ai-25-kakfa-efk-os-36lnvgun6zis4p6fombw3ef6ay.ap-northeast-2.es.amazonaws.com/factory-sensor-001/_count
+
+---
+
+{"count":790,"_shards":{"total":5,"successful":5,"skipped":0,"failed":0}}
 ```
