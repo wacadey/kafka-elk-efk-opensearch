@@ -26,3 +26,184 @@
         - glue : 데이터 구조에 따른 스키마, ETL JOB을 제공(스파크, pandas 활용)
         - 기타 : 권한, 변수, 등등 조정, 추가
         - firehose에서 기존 opensearch(제거)로 가는 방향성, s3로 변경
+
+# 데이터 파이프라인
+```
+================================================================================
+데이터 파이프라인
+================================================================================
+
+[기존 구간]
+
+Python log_gen.py
+   |
+   | sensor_json.log / sensor_text.log
+   v
+Fluent Bit
+   |-------------------------------|
+   | JSON                          | TEXT (선택 경로 / 기존 설정에서는 주석)
+   v                               v
+factory-json-topic              Logstash
+                                   |
+                                   v
+                            factory-text-topic
+   |                               |
+   +---------------+---------------+
+                   v
+                Kafka -> 데이터 폭주시 안정적공급(누락x), 대량 처리 안정적, 공급/소비 분린(브로커)
+                   |
+                   | Consume
+                   v
+                Vector
+                   |
+                   | PutRecord / PutRecordBatch
+                   v
+            Amazon Data Firehose
+
+--------------------------------------------------------------------------------
+여기까지 이전 Kafka/Vector/Firehose 수업과 같은 방향성
+--------------------------------------------------------------------------------
+
+[변경되는 지점]
+
+기존 : Firehose -> OpenSearch
+변경 : Firehose -> S3 Bronze
+
+                   |
+                   v
+             S3 Data Lake
+             ├─ bronze/   JSONL.GZ
+             ├─ silver/   Parquet
+             ├─ reject/   JSON
+             └─ gold/     Parquet
+                   ^
+                   |
+            EventBridge (매시간 10분) : 스케줄링 처리, 매시간 10분에 Step Functions 지시
+                   |
+                   v
+            Step Functions : 7개의 job을 순차 작동하여 데이터 처리 -> 배치 오케스트레이션(EventBridge 포함)
+                   |
+       +-----------+-----------------------------+
+       |                                         |
+       v                                         |
+1. Lambda CheckBronze                            |
+       |                                         |
+       v                                         |
+2. Choice : Bronze 있음?                         |
+       | YES                                     |
+       v                                         |
+3. Glue Bronze -> Silver ----------------------> S3 Silver
+       |                                         |
+       v                                         |
+4. Athena MSCK REPAIR                            |
+       |                                         |
+       v                                         |
+5. Lambda Cleanup Gold                           |
+       |                                         |
+       v                                         |
+6. Athena Silver -> Gold ----------------------> S3 Gold
+       |                                         |
+       v                                         |
+7. Lambda Quality Check                          |
+       |                                         |
+       +---- SUCCESS -> SNS                      |
+       +---- FAILURE -> SNS                      |
+                                                 |
+            Glue Data Catalog <------------------+
+                   |
+                   v
+                Athena : 최종 조회 -> 결과셋 -> 대시보드/기타 서비스 전개
+
+================================================================================
+핵심
+================================================================================
+
+기존 수업
+  Collect -> Broker -> Consume -> Deliver -> Search
+  Fluent Bit -> Kafka -> Vector -> Firehose -> OpenSearch
+
+이번 업그레이드
+  Collect -> Broker -> Consume -> Deliver -> Store -> Orchestrate -> Transform -> Analyze
+  Fluent Bit -> Kafka -> Vector -> Firehose -> S3 -> EventBridge -> Step Functions -> Glue/Athena
+
+파이썬 작성 (task 작업)
+    - lambda 처리 -> s3 저장
+    - glue job (ETL) 처리 -> s3 저장
+```
+
+# Step Functions
+```
+S3 Bronze
+   
+EventBridge
+   ↓
+Step Functions
+   ├─ Lambda : Bronze 존재 확인
+   ├─ Glue   : Bronze → Silver Parquet
+   ├─ Athena : Silver Partition 등록
+   ├─ Lambda : 기존 Gold 삭제
+   ├─ Athena : Silver → Gold 집계
+   ├─ Lambda : Gold 품질검사
+   └─ SNS    : 성공/실패
+                ↓
+        S3 Silver / Gold
+```
+
+# 인프라 구성 1 (브론즈 저장까지 수정)
+- 0. opensearch 제거
+       - opensearch.tf 삭제
+       - variables.tf에서 opensearch 관련 변수 삭제
+       - firehose.tf에서 opensearch 구성삭제
+       - outputs.tf에서 opensearch 출력 삭제
+
+- 1. 변수명 조정 => 금요일 인프라 구분
+       - 프로젝트명, firehose 크기/시간 
+
+- 2. firehose에서 s3로 적제되게 조정 -> Data Lake 구성완료
+
+- 3. 인프라 구성
+```
+       terraform -chdir=infra fmt
+       terraform -chdir=infra validate
+       terraform -chdir=infra plan
+       terraform -chdir=infra apply
+```
+- 4. .env에 FIREHOSE_STREAM_NAME 수정
+```
+       # 이름 조회
+       terraform -chdir=infra output
+
+       # .env 수정
+       FIREHOSE_STREAM_NAME=de-ai-25-eb-step-pipeline-firehose
+
+       # 도커 컴포즈 재구성 => vector 컨테이너의 환경변수로 설정되게 수정
+       docker compose down
+       docker compose up -d
+```
+- 5. 로그 발생 -> ... -> s3://버킷/bronze/*.gzip 확인
+```
+       python log_gen.py
+```
+
+# 인프라 구성 2
+```
+eventbridge.tf
+stepfunctions.tf
+glue.tf
+catalog.tf
+athena.tf
+lambda.tf
+iam-stepfunctions.tf
+iam-glue.tf
+iam-lambda.tf
+sns.tf
+...
+```
+
+# 파이썬 파일
+- etl glue job
+       - ~/glue/bronze_to_silver.py
+- lambda
+       - ~/lambda/check_bronze.py
+       - ~/lambda/cleanup_gold.py
+       - ~/lambda/quality_check.py

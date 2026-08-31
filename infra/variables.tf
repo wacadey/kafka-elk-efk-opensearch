@@ -5,56 +5,24 @@ variable "aws_region" {
 }
 
 variable "project_name" {
-  description = "프로젝트명"
+  description = "프로젝트명, 이벤트브릿지, 스탭함수을 이용한 배치 오케스트레이션"
   type        = string
-  default     = "de-ai-12-kafka-efk"
-}
-# opensearch 서비스(<-엘라스틱서치)/ opensearch 대시보드(<-키바나) 접속 가능한 IP 입력
-variable "allowed_cidr" {
-  description = "opensearch 대시보드/API에 접속한 공인 IP x.x.x.x/32"
-  type        = string
-  # 접속 위치가 바뀌면 접근 x => ip를 변경하여 인프라 반영시켜야 함
-  default = "222.108.125.33/32"
-  validation {
-    condition     = can(cidrhost(var.allowed_cidr, 0))
-    error_message = "가능한 주소는 CIDR 형식이여야 합니다."
-  }
-}
-
-variable "opensearch_engine_version" {
-  description = "OpenSearch 엔진 버전"
-  type        = string
-  default     = "OpenSearch_3.5"
-}
-
-variable "opensearch_instance_type" {
-  description = "학습용 OpenSearch 데이터 노드 인스턴스"
-  type        = string
-  default     = "t3.small.search"
-}
-
-variable "opensearch_ebs_volume_size" {
-  description = "OpenSearch EBS 볼륨 크기(GB)"
-  type        = number
-  default     = 10
-}
-# opensearch, spec(버전, 인스턴유형, 볼륨단위, 인덱스등 설정)
-variable "opensearch_index_name" {
-  description = "firehose가 데이터를 opensearch에 적재할때 세팅하는 인덱스값"
-  type        = string
-  default     = "factory-sensor-001"
+  # 프로젝트명 수정
+  default = "de-ai-12-eb-step-pipeline"
 }
 
 # firehose 이름, firhose->opensearch : iam role name
 variable "firehose_buffer_size" {
   description = "오픈 서치로 전송할때 최대 버퍼 사이즈(MB)"
   type        = number
-  default     = 1
+  # 데이터를 모아서 s3로 전송 (크기 확대)
+  default = 64
 }
 variable "firehose_buffer_interval" {
   description = "오픈 서치로 전송할때 최대 버퍼 시간(s)"
   type        = number
-  default     = 60
+  # 데이터 전송에 대해 시간 기준 확대
+  default = 300
 }
 
 # vector -> firhose : iam role name
@@ -74,3 +42,5 @@ variable "tags" {
     Purpose   = "data-engineering-lab"
   }
 }
+
+# 추가되는 리소스에 맞춰 변수 추가

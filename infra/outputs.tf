@@ -1,30 +1,14 @@
 output "firehose_stream_name" {
   description = "Vector의 stream_name으로 사용할 Firehose 이름"
-  value       = aws_kinesis_firehose_delivery_stream.opensearch.name
+  value       = aws_kinesis_firehose_delivery_stream.bronze.name
 }
 
 output "firehose_stream_arn" {
-  value = aws_kinesis_firehose_delivery_stream.opensearch.arn
-}
-
-output "opensearch_domain_name" {
-  value = aws_opensearch_domain.factory.domain_name
-}
-
-output "opensearch_endpoint" {
-  value = "https://${aws_opensearch_domain.factory.endpoint}"
-}
-
-output "opensearch_dashboards_url" {
-  value = "https://${aws_opensearch_domain.factory.endpoint}/_dashboards/"
-}
-
-output "opensearch_index_name" {
-  value = var.opensearch_index_name
+  value = aws_kinesis_firehose_delivery_stream.bronze.arn
 }
 
 output "firehose_backup_bucket" {
-  value = aws_s3_bucket.firehose_backup.bucket
+  value = aws_s3_bucket.data_lake.bucket
 }
 
 output "firehose_log_group" {

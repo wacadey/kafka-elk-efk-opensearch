@@ -79,7 +79,7 @@ def main() -> None:
             # 로그발생
             generate_logs()
             # 잠시대기 -> 테스트상 텀 부여
-            time.sleep(2) # 명시적 대기 -> 추후 조정
+            time.sleep(1) # 명시적 대기 -> 추후 조정
     except Exception as e:
         print("종료 처리", e)
 
