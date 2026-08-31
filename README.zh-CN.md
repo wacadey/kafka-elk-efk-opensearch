@@ -11,50 +11,7 @@
     - OpenSearch Dashboard 对应 Kibana
 
 # 目标系统
-```mermaid
-flowchart LR
-    subgraph SOURCE[数据源]
-        PY[Python<br/>log_gen.py]
-        LOGS["/sensor_logs/*.log"]
-        PY -->|写入文件| LOGS
-    end
-
-    subgraph INGESTION[数据采集]
-        FB[Fluent Bit<br/>代理]
-        LS[Logstash]
-    end
-
-    subgraph TRANSFORM[数据转换]
-        GROK[Grok<br/>模式匹配与字段提取]
-        MUTATE[Mutate<br/>字符串转浮点数]
-        TAG[Tagging<br/>添加告警元数据]
-        GROK --> MUTATE --> TAG
-    end
-
-    subgraph MESSAGING[消息传递]
-        JSON_TOPIC[factory-json-topic]
-        TEXT_TOPIC[factory-text-topic]
-        KAFKA[Kafka / MSK<br/>消息代理]
-        JSON_TOPIC --> KAFKA
-        TEXT_TOPIC --> KAFKA
-    end
-
-    subgraph VISUALIZE[检索与可视化]
-        OS[(OpenSearch)]
-        DASH[Dashboard / Kibana]
-        OS <-->|建立索引与搜索| DASH
-    end
-
-    LOGS -->|持续读取，共享卷| FB
-    FB -->|通道 A：JSON 直连| JSON_TOPIC
-    FB -->|通道 B：HTTP 转发| LS
-    LS --> GROK
-    TAG -->|处理后的数据| TEXT_TOPIC
-    KAFKA --> CONNECT[Kafka Connect / UI]
-    CONNECT --> OS
-```
-
-数据从 Python 生成的两类日志出发，经 Fluent Bit 后可选择以下两条路线：
+路线和老师原图一致，分为 JSON 直连与文本处理两条通道：
 
 ```mermaid
 flowchart TD
@@ -62,15 +19,21 @@ flowchart TD
     JSON_LOG[sensor_json.log<br/>半结构化数据]
     TEXT_LOG[sensor_text.log<br/>非结构化数据]
     FB[Fluent Bit]
+
     JSON_TOPIC[factory-json-topic]
-    LS[Logstash<br/>Grok 转换]
+    LS[Logstash]
+    GROK[Grok<br/>模式匹配并提取字段]
+    MUTATE[Mutate<br/>字符串转换为浮点数]
+    TAG[Tagging<br/>添加条件告警元数据]
     TEXT_TOPIC[factory-text-topic]
-    KAFKA[Apache Kafka<br/>接收代理数据]
-    UI[Kafka UI<br/>仪表板]
+
+    KAFKA[Apache Kafka / MSK<br/>消息代理]
+    UI[Kafka UI<br/>查看 Topic 和消息]
     VECTOR[Vector]
     FIREHOSE[AWS Firehose<br/>缓冲]
-    S3[(S3<br/>青铜层)]
-    OS[(OpenSearch<br/>索引与搜索)]
+    S3[(S3<br/>仅备份失败文档)]
+    OS[(OpenSearch<br/>建立索引与搜索)]
+    DASH[OpenSearch Dashboard / Kibana]
     AIRFLOW[Airflow DAG]
     MEDALLION[Medallion 架构]
 
@@ -78,20 +41,23 @@ flowchart TD
     PY --> TEXT_LOG
     JSON_LOG --> FB
     TEXT_LOG --> FB
-    FB -->|路线 A：JSON 直连| JSON_TOPIC
-    FB -->|路线 B：文本经 HTTP| LS
-    LS -->|非结构化转为半结构化| TEXT_TOPIC
+
+    FB -->|通道 A：JSON 直连| JSON_TOPIC
+    FB -->|通道 B：HTTP 5022| LS
+    LS --> GROK --> MUTATE --> TAG --> TEXT_TOPIC
+
     JSON_TOPIC --> KAFKA
     TEXT_TOPIC --> KAFKA
     KAFKA --> UI
     KAFKA --> VECTOR
-    VECTOR -->|发送 Kafka 消息| FIREHOSE
+    VECTOR --> FIREHOSE
     FIREHOSE --> S3
     FIREHOSE --> OS
+    OS <--> DASH
     OS --> AIRFLOW --> MEDALLION
 ```
 
-> 说明：两条采集路线是概念设计，实际运行时只选择其中一条。Kafka 可部署在 EC2、Kubernetes 等环境中，也可直接使用 AWS MSK。
+> 老师原图说明：Fluent Bit 概念上设计了两条采集路线，实际运行时可按课程阶段选择。Kafka 可以部署在 EC2、Kubernetes 等环境中，也可以使用 AWS MSK。
 
 # 开发环境配置
 - 配置 docker-compose.yaml
@@ -152,5 +118,73 @@ flowchart TD
 
 - 测试接收 Fluent Bit 发送的传感器消息
   ```sh
+  # JSON 数据
   sh /opt/kafka/bin/kafka-console-consumer.sh --topic factory-json-topic --bootstrap-server 127.0.0.1:9092
+
+  # 经 Logstash 处理的文本数据
+  sh /opt/kafka/bin/kafka-console-consumer.sh --topic factory-text-topic --bootstrap-server 127.0.0.1:9092
   ```
+
+# Vector
+- Vector 是由 Datadog 开发的工具。
+- 它使用 Rust 开发，负责收集、转换和传输日志及指标，是一款高性能、轻量级的数据管道工具。
+- 查看 Vector 实时日志：
+  ```powershell
+  docker logs -f vector
+  ```
+- Vector 输出日志示例：
+  ```json
+  {
+    "@timestamp": 1787890534.104485,
+    "headers": {},
+    "humidity": 71.7,
+    "message_key": null,
+    "offset": 18,
+    "partition": 0,
+    "sensor_id": "AI-FACTORY-001",
+    "source_type": "kafka",
+    "status": "RUNNING",
+    "temperature": 104.1,
+    "topic": "factory-json-topic",
+    "timestamp": "2026-08-28T04:15:34.604Z",
+    "vector_ingest_at": "2026-08-28T04:15:34.617424692Z"
+  }
+  ```
+
+其中：
+
+- `timestamp`：日志进入 Vector 时由 Kafka source 记录的时间。
+- `vector_ingest_at`：Vector 的 remap transform 添加的处理时间。
+- 示例中两者相差约 `0.013` 秒，表示消息从 Vector 接收至完成该转换的处理延迟约为 13 毫秒。
+
+# 检查 OpenSearch 中已写入的文档数量
+
+在浏览器中访问索引的 `_count` API：
+
+```text
+https://<OpenSearch 域端点>/factory-sensor-001/_count
+```
+
+你的当前地址是：
+
+```text
+https://search-de-ai-12-kafka-efk-os-cigv4yrkdeqgcbqo6hkcyh2q24.ap-northeast-2.es.amazonaws.com/factory-sensor-001/_count
+```
+
+正常响应示例：
+
+```json
+{
+  "count": 790,
+  "_shards": {
+    "total": 5,
+    "successful": 5,
+    "skipped": 0,
+    "failed": 0
+  }
+}
+```
+
+- `count`：索引中当前保存的文档数量，实际值会随日志持续写入而变化。
+- `successful`：成功参与此次统计的分片数量。
+- `failed`：统计失败的分片数量，正常情况下应为 `0`。
